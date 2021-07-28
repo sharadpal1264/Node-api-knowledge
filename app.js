@@ -1,16 +1,19 @@
+require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
+
 const passport = require('passport');
 const cors = require("cors");
-const upload = require('express-fileupload');
+const fileUpload = require('express-fileupload');
+const path = require('path');
+
 const app = express();
 
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
-cloud_name:'socialadda',
-api_key:process.env.cloudinary_api_key,
-api_secret:process.env.cloudinary_api_secret
+  cloud_name:process.env.cloud_name,
+  api_key:process.env.cloudinary_api_key,
+  api_secret:process.env.cloudinary_api_secret
 });
 
 // import Database
@@ -21,9 +24,6 @@ require('./Model/User');
 
 // import Passport-setup-Stratgies
 require('./config/passport-setup');
-
-//Import verify Authentication middleware
-const auth = require('./middleware-Authentication');
 
 app.use(function(req, res, next) {
   let allowedOrigins = ['*']; // list of url-s
@@ -37,9 +37,12 @@ app.use(function(req, res, next) {
 });
 
 app.use(passport.initialize());
-app.use(upload({useTempFiles:true}));
-app.use(bodyParser.json()); // for parsing application/json
-app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+app.use(fileUpload({
+  useTempFiles : true,
+  tempFileDir : path.join(__dirname,'tmp'),
+}));
+app.use(express.json());; // for parsing application/json
+app.use(express.urlencoded({ extended: true }));// for parsing application/x-www-form-urlencoded
 app.use(express.static(__dirname + '/'));
 app.use(function(err, req, res, next) {
   res.status(500).send('There is some error in you Input !!');
