@@ -15,9 +15,15 @@ const mongoose = require('mongoose');
 const Content = mongoose.model('Content');
 const Category = mongoose.model('Category');
 const cloudinary = require('cloudinary').v2;
+//const multer  = require('multer')
+
 
 //Import Middleware Authentication
 const {auth} = require('../middleware-Authentication');
+
+// Multer single file parser
+// const upload = multer({limits:{fileSize:4000000}}).single('upload-photo')
+
 
 //Test route to test the authrorization
 router.get('/UserData', auth, (req, res) => {
@@ -29,57 +35,63 @@ router.get('/UserData', auth, (req, res) => {
 });
 
 // Add New Component with specific category
-router.post("/addContent",auth,async (req, res) => {
+router.post("/addContent",auth, async (req, res) => {
   const category= await Category.findOne({CategoryName:req.body.CategoryName});
-  if(!category){
-    return res.status(404).send("Category not Found !!");
-  }
+  try{
 
-  //With Image content working with postman
-  if(req.files){
-    console.log("file exist");
-    const file = req.files.profile;
-    cloudinary.uploader.upload(file.tempFilePath,
-      {"max-width":100,"max-height":200,"format":"jpg","folder":"Knowlede-Base-app-Images"},
-      async (err,result)=> { 
-          if (err){
-                      res.send({
-                      "status":"failed",
-                      "message":"Image couldn't be updated !!"
-                      });
-                  };
-                  
-          if(result){
-                  const content = new Content();
-                  content.CategoryName = category.CategoryName; 
-                  content.ProfileImage = result.secure_url; 
-                  content.ContentDetails = req.body.ContentDetails;
-                  await content.save();       
-                  //Associate User collection with posts
-                  category.contents.push(content._id)
-                  await category.save();
-                  res.status(200).send(content);
-              }
-      });
-  }
-
-  //Without Image content working with both
-  if(req.files==undefined){
-    try {
-      const content = new Content();
-      content.CategoryName = category.CategoryName; 
-      content.ProfileImage = req.body.ProfileImage; 
-      content.ContentDetails = req.body.ContentDetails;
-      await content.save();       
-      //Associate User collection with posts
-      category.contents.push(content._id)
-      await category.save();
-      res.status(200).send(content);
-    } catch (error) {
-      res.status(404).send("")
+    if(!category){
+      return res.status(404).send("Category not Found !!");
     }
+  
+    //With Image content working with postman
+    if(req.files){
+      //console.log("file exist");
+      const file = req.files.profile;
+      //console.log(file);
+      cloudinary.uploader.upload(file.tempFilePath,{"max-width":100,"max-height":200,"format":"jpg","folder":"Knowlede-Base-app-Images"},async (err,result)=> { 
+            if (err){
+              res.send({
+                        "status":"failed",
+                        "message":"Image couldn't be updated !!"
+                        });
+                    };
+            //console.log(result);
+            if(result){
+                    const content = new Content();
+                    content.CategoryName = category.CategoryName; 
+                    content.ProfileImage = result.secure_url; 
+                    content.ContentDetails = req.body.ContentDetails;
+                    await content.save();       
+                    //Associate User collection with posts
+                    category.contents.push(content._id)
+                    await category.save();
+                    res.status(200).send(content);
+                }
+        });
+    }
+    
+    //Without Image content working with both
+    if(req.files==undefined){
+      console.log("without file");
+      try {
+        const content = new Content();
+        content.CategoryName = category.CategoryName; 
+        content.ProfileImage = req.body.ProfileImage; 
+        content.ContentDetails = req.body.ContentDetails;
+        await content.save();       
+        //Associate User collection with posts
+        category.contents.push(content._id)
+        await category.save();
+        res.status(200).send(content);
+      } catch (error) {
+        res.status(404).send("There is some error");
+      }
+    }
+
   }
- 
+  catch(error){
+    console.log("some error is there");
+  }
 });
 
 // Add New Category
